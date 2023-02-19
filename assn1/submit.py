@@ -1,22 +1,8 @@
 import numpy as np
-import sklearn
 from collections import defaultdict
-from sklearn.linear_model import LogisticRegression
 from sklearn.svm import LinearSVC
+from sklearn.linear_model import LogisticRegression
 
-# You are allowed to import any submodules of sklearn as well e.g. sklearn.svm etc
-# You are not allowed to use other libraries such as scipy, keras, tensorflow etc
-
-# SUBMIT YOUR CODE AS A SINGLE PYTHON (.PY) FILE INSIDE A ZIP ARCHIVE
-# THE NAME OF THE PYTHON FILE MUST BE submit.py
-# DO NOT INCLUDE OTHER PACKAGES LIKE SCIPY, KERAS ETC IN YOUR CODE
-# THE USE OF ANY MACHINE LEARNING LIBRARIES OTHER THAN SKLEARN WILL RESULT IN A STRAIGHT ZERO
-
-# DO NOT CHANGE THE NAME OF THE METHODS my_fit, my_predict etc BELOW
-# THESE WILL BE INVOKED BY THE EVALUATION SCRIPT. CHANGING THESE NAMES WILL CAUSE EVALUATION FAILURE
-
-# You may define any new functions, variables, classes here
-# For example, functions to calculate next coordinate or step length
 def swap(X, Y):
     X[0], Y[0]  = Y[0], X[0]
     X[1], Y[1]  = Y[1], X[1]
@@ -38,11 +24,20 @@ def preprocess(X):
             row[72] = 1 - row[72]
     return X
 
-groups = defaultdict(list)
-outputs = defaultdict(list)
-model = defaultdict(list)
-labels = []
-data = []
+# You are allowed to import any submodules of sklearn as well e.g. sklearn.svm etc
+# You are not allowed to use other libraries such as scipy, keras, tensorflow etc
+
+# SUBMIT YOUR CODE AS A SINGLE PYTHON (.PY) FILE INSIDE A ZIP ARCHIVE
+# THE NAME OF THE PYTHON FILE MUST BE submit.py
+# DO NOT INCLUDE OTHER PACKAGES LIKE SCIPY, KERAS ETC IN YOUR CODE
+# THE USE OF ANY MACHINE LEARNING LIBRARIES OTHER THAN SKLEARN WILL RESULT IN A STRAIGHT ZERO
+
+# DO NOT CHANGE THE NAME OF THE METHODS my_fit, my_predict etc BELOW
+# THESE WILL BE INVOKED BY THE EVALUATION SCRIPT. CHANGING THESE NAMES WILL CAUSE EVALUATION FAILURE
+
+# You may define any new functions, variables, classes here
+# For example, functions to calculate next coordinate or step length
+
 ################################
 # Non Editable Region Starting #
 ################################
@@ -57,50 +52,54 @@ def my_fit( Z_train ):
 	# The next 4 columns contain the select bits for the second mux
 	# The first 64 + 4 + 4 = 72 columns constitute the challenge
 	# The last column contains the response
-	# Preprocessing the training set
+
 	Z_train = preprocess(Z_train)
-	counter, flag = 0, 0
+
+	groups = defaultdict(list)
+	outputs = defaultdict(list)
+	model = defaultdict(list)
+
+	score,flag = 0,0
 
 	for e in Z_train:
-		firstSbits = e[64:68]
-		lastSbits = e[68:72]
-		labels.append(e[72])
-		data.append(e[0:64])
-		i, j, flag = compare(firstSbits, lastSbits)
+		i, j, flag = compare(e[64:68], e[68:72])
 		groups["{}->{}".format(i,j)].append(e[0:64])
 		outputs["{}->{}".format(i,j)].append(e[72])
 
 	for key in groups.keys():
 		i = np.array(groups[key])
 		o = np.array(outputs[key])
-		clf = LinearSVC(loss="hinge", dual = True, C = 10)
+		# clf = LinearSVC(loss="squared_hinge", dual = True, C = 0.7, max_iter = 700)
+		clf = LogisticRegression(penalty="l1", warm_start = True, verbose = True, n_jobs = -1, max_iter = 1500)
 		clf.fit(i,o)
 		model[key] = clf
-		# print(models[key].score(i,o))
-		counter += model[key].score(i,o)
+		score += model[key].score(i,o)/120
 		flag += 1
 
 	return model					# Return the trained model
 
+
 ################################
 # Non Editable Region Starting #
 ################################
-def my_predict( X_tst, model):
+def my_predict( X_tst, model ):
 ################################
 #  Non Editable Region Ending  #
 ################################
-	# Preprocessing the test ser
-	pred = []
-	# X_tst = preprocess(X_tst)
 
-	for e in X_tst:
-		firstSbits = e[64:68]
-		lastSbits = e[68:72]
-		labels.append(e[72])
-		data.append(e[0:72])
-		i, j, flag = compare(firstSbits, lastSbits)
-		pred.append(model["{}->{}".format(i,j)].predict(e[0:64]))
-		
 	# Use this method to make predictions on test challenges
-	
+	dim = X_tst.shape
+
+	score, flag = 0, 0
+	pred = np.zeros(dim[0])
+
+	for a in range(dim[0]):
+		e = X_tst[a]
+		i, j, flag = compare(e[64:68], e[68:72])
+		if(flag == 1):
+			m = model["{}->{}".format(j,i)].predict([e[0:64]])
+			pred[a] = 1-m
+		else:
+			m = model["{}->{}".format(i,j)].predict([e[0:64]])
+			pred[a] = m
 	return pred

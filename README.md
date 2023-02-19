@@ -1,5 +1,7 @@
-# CS771
+# CS771A
 
-## __Assignment 1__:
+This repository consists of the CS771A mini-projects.
 
-Cracking a __XORRO Ring Oscillator PUF__ using Cascaded Linear Models.  
+- [x] XORRO PUF Problem
+
+
